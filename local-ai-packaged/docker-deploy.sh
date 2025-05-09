@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# ------------------------------------------------------------------------------
+# ASFY Local AI Deployment Script
+# Based on: https://github.com/coleam00/ai-agents-masterclass/tree/main/local-ai-packaged
+# ------------------------------------------------------------------------------
+
+if [ ! -f .env.cloudflare ]; then
+  echo "❌ Error: .env.cloudflare file not found. Please create it with your Cloudflare credentials."
+  exit 1
+fi
+
+echo "🔐 Regenerating cloudflare.ini securely..."
+bash ./generate-cloudflare-ini.sh
+
+echo "🚀 Starting Docker deployment..."
+docker-compose up -d --build
+
+echo "🔁 Scheduling automatic SSL certificate renewal..."
+(crontab -l 2>/dev/null | grep -v 'certbot renew'; echo "0 2 * * * /usr/bin/certbot renew --quiet --deploy-hook 'docker-compose -f /Users/doma/Library/CloudStorage/OneDrive-Personal/ASFY\\ Dev/n8n-local-ai/docker-compose.yml restart nginx'") | crontab -
+
+echo "🔍 Running post-deployment health check..."
+bash ./health-check.sh
